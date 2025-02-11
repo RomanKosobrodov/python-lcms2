@@ -53,7 +53,9 @@ COLOR_WORD = 1
 COLOR_DBL = 2
 
 class CmsError(Exception):
-	pass
+	def __init__(self, message="LibCMS2 error"):
+		super().__init__(message)
+
 
 def COLORB(channel0=0, channel1=0, channel2=0, channel3=0):
 	"""
@@ -102,13 +104,12 @@ def cmsOpenProfileFromFile(profileFilename, mode=None):
 	mode - stub parameter for python-lcms compatibility
 	"""
 	if not os.path.isfile(profileFilename):
-		raise CmsError, 'Invalid profile path provided: %s' % profileFilename
+		raise CmsError(f"Invalid profile path provided: \"{profileFilename}\"")
 
 	result = _lcms2.openProfile(profileFilename)
 
 	if result is None:
-		msg = 'It seems provided profile is invalid'
-		raise CmsError, msg + ': %s' % profileFilename
+		raise CmsError(f"Invalid profile provided in \"{profileFilename}\"")
 
 	return result
 
@@ -160,7 +161,7 @@ def cmsCreateTransform(inputProfile, inMode,
 	"""
 
 	if renderingIntent not in (0, 1, 2, 3):
-		raise CmsError, 'renderingIntent must be an integer between 0 and 3'
+		raise CmsError ("renderingIntent must be an integer between 0 and 3")
 
 	result = _lcms2.buildTransform(inputProfile, inMode,
 								outputProfile, outMode,
@@ -168,7 +169,7 @@ def cmsCreateTransform(inputProfile, inMode,
 
 	if result is None:
 		msg = 'Cannot create requested transform'
-		raise CmsError, msg + ": %s %s" % (inMode, outMode)
+		raise CmsError(f"Unable to create transform {inMode} -> {outMode}")
 
 	return result
 
@@ -196,10 +197,10 @@ def cmsCreateProofingTransform(inputProfile, inMode,
 	"""
 
 	if renderingIntent not in (0, 1, 2, 3):
-		raise CmsError, 'renderingIntent must be an integer between 0 and 3'
+		raise CmsError('renderingIntent must be an integer between 0 and 3')
 
 	if proofingIntent not in (0, 1, 2, 3):
-		raise CmsError, 'proofingIntent must be an integer between 0 and 3'
+		raise CmsError('proofingIntent must be an integer between 0 and 3')
 
 	result = _lcms2.buildProofingTransform(inputProfile, inMode,
 										outputProfile, outMode,
@@ -207,8 +208,7 @@ def cmsCreateProofingTransform(inputProfile, inMode,
 										proofingIntent, flags)
 
 	if result is None:
-		msg = 'Cannot create requested proofing transform'
-		raise CmsError, msg + ': %s %s' % (inMode, outMode)
+		raise CmsError(f"Unable to create proofing transform {inMode} -> {outMode}")
 
 	return result
 
@@ -239,8 +239,7 @@ def cmsDoTransform(hTransform, inbuff, outbuff, val=None):
 		return
 
 	else:
-		msg = 'inputBuffer and outputBuffer must be Python 5-member list objects'
-		raise CmsError, msg
+		raise CmsError("inputBuffer and outputBuffer must be Python lists of length 5")
 
 
 def cmsDeleteTransform(transform):
@@ -263,9 +262,9 @@ def cmsGetProfileName(profile):
 	This function is given mainly for building user interfaces.
 	
 	profile - a valid lcms profile handle
-	Returns profile name as an unicode string value.	
+	Returns profile name
 	"""
-	return str(_lcms2.getProfileName(profile).strip().decode('cp1252'))
+	return _lcms2.getProfileName(profile)
 
 
 def cmsGetProfileInfo(profile):
@@ -273,9 +272,9 @@ def cmsGetProfileInfo(profile):
 	This function is given mainly for building user interfaces.
 	
 	profile - a valid lcms profile handle
-	Returns profile description info as an unicode string value.	
+	Returns profile description info
 	"""
-	return str(_lcms2.getProfileInfo(profile).strip().decode('cp1252'))
+	return _lcms2.getProfileInfo(profile)
 
 
 def cmsGetProfileCopyright(profile):
@@ -283,6 +282,6 @@ def cmsGetProfileCopyright(profile):
 	This function is given mainly for building user interfaces.
 	
 	profile - a valid lcms profile handle
-	Returns profile copyright info as an unicode string value.	
+	Returns profile copyright info
 	"""
-	return str(_lcms2.getProfileInfoCopyright(profile).strip().decode('cp1252'))
+	return _lcms2.getProfileInfoCopyright(profile)

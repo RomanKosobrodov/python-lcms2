@@ -1,73 +1,60 @@
-# -*- coding: utf-8 -*-
-#
-# 	python-lcms2 build script
-#
-# 	Copyright (C) 2017 by Igor E. Novikov
-#
-# 	This program is free software: you can redistribute it and/or modify
-# 	it under the terms of the GNU General Public License as published by
-# 	the Free Software Foundation, either version 3 of the License, or
-# 	(at your option) any later version.
-#
-# 	This program is distributed in the hope that it will be useful,
-# 	but WITHOUT ANY WARRANTY; without even the implied warranty of
-# 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# 	GNU General Public License for more details.
-#
-# 	You should have received a copy of the GNU General Public License
-# 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+from setuptools import setup, Extension
+from sys import platform
 
-from distutils.core import setup, Extension
-import commands
+SOURCES = ["src/lcms2/_lcms2.c",
+           "Little-CMS/src/cmsalpha.c",
+           "Little-CMS/src/cmscam02.c",
+           "Little-CMS/src/cmscgats.c",
+           "Little-CMS/src/cmscnvrt.c",
+           "Little-CMS/src/cmserr.c",
+           "Little-CMS/src/cmsgamma.c",
+           "Little-CMS/src/cmsgmt.c",
+           "Little-CMS/src/cmshalf.c",
+           "Little-CMS/src/cmsintrp.c",
+           "Little-CMS/src/cmsio0.c",
+           "Little-CMS/src/cmsio1.c",
+           "Little-CMS/src/cmslut.c",
+           "Little-CMS/src/cmsmd5.c",
+           "Little-CMS/src/cmsmtrx.c",
+           "Little-CMS/src/cmsnamed.c",
+           "Little-CMS/src/cmsopt.c",
+           "Little-CMS/src/cmspack.c",
+           "Little-CMS/src/cmspcs.c",
+           "Little-CMS/src/cmsplugin.c",
+           "Little-CMS/src/cmsps2.c",
+           "Little-CMS/src/cmssamp.c",
+           "Little-CMS/src/cmssm.c",
+           "Little-CMS/src/cmstypes.c",
+           "Little-CMS/src/cmsvirt.c",
+           "Little-CMS/src/cmswtpnt.c",
+           "Little-CMS/src/cmsxform.c"]
 
-def get_pkg_libs(pkg_names):
-	libs = []
-	for item in pkg_names:
-		output = commands.getoutput("pkg-config --libs-only-l %s" % item)
-		names = output.replace('-l', '').strip().split(' ')
-		for name in names:
-			if not name in libs: libs.append(name)
-	return libs
+INCLUDE_DIRECTORIES = ["Little-CMS/include", "Little-CMS/src"]
+LIBRARY_DIRECTORIES = list()
+
+if platform == "win32":
+     sdk = "C:\\Program Files (x86)\\Windows Kits\\10\\"
+     sdk_include = sdk + "Include\\10.0.26100.0\\"
+     sdk_lib = sdk + "Lib\\10.0.26100.0\\"
+     for p in ("cppwinrt", "shared", "ucrt", "um", "winrt"):
+         INCLUDE_DIRECTORIES.append(sdk_include + p)
+
+     for p in ("ucrt", "um"):
+         LIBRARY_DIRECTORIES.append(sdk_lib + p + "\\x64")
 
 
-src_path = 'src/'
-lcms2_src = src_path + 'lcms2/'
+setup_args = dict(
+    ext_modules=[
+        Extension(
+            name="_lcms2",
+            language="c",
+            define_macros=[('MAJOR_VERSION', '0'), ('MINOR_VERSION', '4')],
+            include_dirs=INCLUDE_DIRECTORIES,
+            library_dirs=LIBRARY_DIRECTORIES,
+            sources=SOURCES,
+            py_limited_api=True
+        )
+    ]
+)
 
-lcms2_module = Extension('lcms2._lcms2',
-		define_macros=[('MAJOR_VERSION', '0'),
-					('MINOR_VERSION', '1')],
-		sources=[lcms2_src + '_lcms2.c'],
-		libraries=get_pkg_libs(['lcms2', ]),
-		extra_compile_args=["-Wall"])
-
-setup (name='lcms2',
-		version='0.1',
-		description='lcms2 python extention',
-		author='Igor E. Novikov',
-		author_email='sk1.project.org@gmail.com',
-		maintainer='Igor E. Novikov',
-		maintainer_email='sk1.project.org@gmail.com',
-		license='GPL v3',
-		url='http://sk1project.net',
-		download_url='http://sk1project.net/',
-		long_description='''
-		lcms2 is a python extention which provides binding to lcms2 library. 
-		sK1 Team (http://sk1project.net), copyright (c) 2017 by Igor E. Novikov.
-		''',
-	classifiers=[
-		'Development Status :: 5 - Stable',
-		'Environment :: Console',
-		'License :: OSI Approved :: GPL v3',
-		'Operating System :: POSIX',
-		'Operating System :: MacOS :: MacOS X',
-		'Operating System :: Microsoft :: Windows',
-		'Programming Language :: Python',
-		'Programming Language :: C',
-		'Topic :: Multimedia :: Graphics :: Graphics Conversion',
-		],
-
-	packages=['lcms2'],
-
-	package_dir={'lcms2': 'src/lcms2'},
-
-	ext_modules=[lcms2_module])
+setup(**setup_args)

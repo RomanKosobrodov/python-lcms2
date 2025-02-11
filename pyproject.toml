@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lcms2py"
+version = "0.0.1"
+authors = [
+    { name = "Igor E. Novikov", email = "sk1.project.org@gmail.com"},
+    { name = "Roman Kosobrodov", email = "roman@kosobrodov.net" },
+]
+description = "Python binding for LittleCMS2 library"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    'Programming Language :: C',
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+	'Development Status :: 5 - Stable',
+	'Environment :: Console',
+    'Topic :: Multimedia :: Graphics :: Graphics Conversion'    
+]
+keywords = [""]
+dependencies = []
+
+[project.urls]
+"Homepage" = "https://github.com/RomanKosobrodov/python-lcms2"
+"Bug Tracker" = "https://github.com/RomanKosobrodov/python-lcms2/issues"
+

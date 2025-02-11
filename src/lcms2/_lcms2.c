@@ -80,7 +80,12 @@ pycms_OpenProfile(PyObject *self, PyObject *args) {
 		return Py_None;
 	}
 
-	return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hProfile, (void *)cmsCloseProfile));
+
+//	return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hProfile, (void *)cmsCloseProfile));
+    PyObject* capsule = PyCapsule_New((void *)hProfile,
+                                       NULL,
+                                       (void *)cmsCloseProfile);
+    return Py_BuildValue("O", capsule);
 }
 
 static PyObject *
@@ -95,7 +100,11 @@ pycms_CreateRGBProfile(PyObject *self, PyObject *args) {
 		return Py_None;
 	}
 
-	return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hProfile, (void *)cmsCloseProfile));
+	//return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hProfile, (void *)cmsCloseProfile));
+    PyObject* capsule = PyCapsule_New((void *)hProfile,
+                                       NULL,
+                                       (void *)cmsCloseProfile);
+	return Py_BuildValue("O", capsule);
 }
 
 static PyObject *
@@ -109,8 +118,11 @@ pycms_CreateLabProfile(PyObject *self, PyObject *args) {
 		Py_INCREF(Py_None);
 		return Py_None;
 	}
-
-	return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hProfile, (void *)cmsCloseProfile));
+    PyObject* capsule = PyCapsule_New((void *)hProfile,
+                                       NULL,
+                                       (void *)cmsCloseProfile);
+	return Py_BuildValue("O", capsule);
+	//return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hProfile, (void *)cmsCloseProfile));
 }
 
 static PyObject *
@@ -128,7 +140,11 @@ pycms_CreateGrayProfile(PyObject *self, PyObject *args) {
 		return Py_None;
 	}
 
-	return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hProfile, (void *)cmsCloseProfile));
+	//return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hProfile, (void *)cmsCloseProfile));
+    PyObject* capsule = PyCapsule_New((void *)hProfile,
+                                       NULL,
+                                       (void *)cmsCloseProfile);
+	return Py_BuildValue("O", capsule);
 }
 
 static PyObject *
@@ -143,7 +159,11 @@ pycms_CreateXYZProfile(PyObject *self, PyObject *args) {
 		return Py_None;
 	}
 
-	return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hProfile, (void *)cmsCloseProfile));
+	//return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hProfile, (void *)cmsCloseProfile));
+    PyObject* capsule = PyCapsule_New((void *)hProfile,
+                                   NULL,
+                                   (void *)cmsCloseProfile);
+	return Py_BuildValue("O", capsule);
 }
 
 static PyObject *
@@ -164,8 +184,12 @@ pycms_BuildTransform (PyObject *self, PyObject *args) {
 		return Py_None;
 	}
 
-	hInputProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(inputProfile);
-	hOutputProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(outputProfile);
+	//hInputProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(inputProfile);
+	//hOutputProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(outputProfile);
+
+	hInputProfile = (cmsHPROFILE) PyCapsule_GetPointer(inputProfile, NULL);
+	hOutputProfile = (cmsHPROFILE) PyCapsule_GetPointer(outputProfile, NULL);
+
 	flags = (cmsUInt32Number) inFlags;
 
 	hTransform = cmsCreateTransform(hInputProfile, getLCMStype(inMode),
@@ -176,7 +200,11 @@ pycms_BuildTransform (PyObject *self, PyObject *args) {
 		return Py_None;
 	}
 
-	return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hTransform, (void *)cmsDeleteTransform));
+	//return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hTransform, (void *)cmsDeleteTransform));
+    PyObject* capsule = PyCapsule_New((void *)hTransform,
+                               NULL,
+                               (void *)hTransform);
+	return Py_BuildValue("O", capsule);
 }
 
 static PyObject *
@@ -201,9 +229,13 @@ pycms_BuildProofingTransform (PyObject *self, PyObject *args) {
 		return Py_None;
 	}
 
-	hInputProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(inputProfile);
-	hOutputProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(outputProfile);
-	hProofingProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(proofingProfile);
+//	hInputProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(inputProfile);
+//	hOutputProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(outputProfile);
+//	hProofingProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(proofingProfile);
+
+	hInputProfile = (cmsHPROFILE) PyCapsule_GetPointer(inputProfile, NULL);
+	hOutputProfile = (cmsHPROFILE) PyCapsule_GetPointer(outputProfile, NULL);
+	hProofingProfile = (cmsHPROFILE) PyCapsule_GetPointer(proofingProfile, NULL);
 	flags = (cmsUInt32Number) inFlags;
 
 	hTransform = cmsCreateProofingTransform(hInputProfile, getLCMStype(inMode),
@@ -214,7 +246,11 @@ pycms_BuildProofingTransform (PyObject *self, PyObject *args) {
 		return Py_None;
 	}
 
-	return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hTransform, (void *)cmsDeleteTransform));
+	//return Py_BuildValue("O", PyCObject_FromVoidPtr((void *)hTransform, (void *)cmsDeleteTransform));
+    PyObject* capsule = PyCapsule_New((void *)hTransform,
+                               NULL,
+                               (void *)hTransform);
+	return Py_BuildValue("O", capsule);
 }
 
 #define COLOR_BYTE 0
@@ -246,7 +282,8 @@ pycms_TransformPixel (PyObject *self, PyObject *args) {
 	inbuf[2]=(unsigned char)channel3;
 	inbuf[3]=(unsigned char)channel4;
 
-	hTransform = (cmsHTRANSFORM) PyCObject_AsVoidPtr(transform);
+	//hTransform = (cmsHTRANSFORM) PyCObject_AsVoidPtr(transform);
+	hTransform = (cmsHTRANSFORM) PyCapsule_GetPointer(transform, NULL);
 
 	if(out_type==COLOR_WORD){
 		cmsDoTransform(hTransform, inbuf, outbuf, 1);
@@ -291,7 +328,8 @@ pycms_TransformPixel16b (PyObject *self, PyObject *args) {
 	inbuf[2]=(unsigned short)channel3;
 	inbuf[3]=(unsigned short)channel4;
 
-	hTransform = (cmsHTRANSFORM) PyCObject_AsVoidPtr(transform);
+	//hTransform = (cmsHTRANSFORM) PyCObject_AsVoidPtr(transform);
+	hTransform = (cmsHTRANSFORM) PyCapsule_GetPointer(transform, NULL);
 
 	if(out_type==COLOR_BYTE){
 		cmsDoTransform(hTransform, inbuf, outbuf, 1);
@@ -331,7 +369,8 @@ pycms_TransformPixelDbl (PyObject *self, PyObject *args) {
 		return Py_None;
 	}
 
-	hTransform = (cmsHTRANSFORM) PyCObject_AsVoidPtr(transform);
+	//hTransform = (cmsHTRANSFORM) PyCObject_AsVoidPtr(transform);
+	hTransform = (cmsHTRANSFORM) PyCapsule_GetPointer(transform, NULL);
 
 	if(out_type==COLOR_WORD){
 		cmsDoTransform(hTransform, inbuf, outbuf, 1);
@@ -367,7 +406,8 @@ pycms_GetProfileName (PyObject *self, PyObject *args) {
 	}
 
 	buffer=malloc(BUFFER_SIZE);
-	hProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(profile);
+	//hProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(profile);
+	hProfile = (cmsHPROFILE) PyCapsule_GetPointer(profile, NULL);
 
 	cmsGetProfileInfoASCII(hProfile,
 			cmsInfoDescription,
@@ -393,7 +433,8 @@ pycms_GetProfileInfo (PyObject *self, PyObject *args) {
 	}
 
 	buffer=malloc(BUFFER_SIZE);
-	hProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(profile);
+	//hProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(profile);
+	hProfile = (cmsHPROFILE) PyCapsule_GetPointer(profile, NULL);
 
 	cmsGetProfileInfoASCII(hProfile,
 			cmsInfoModel,
@@ -419,7 +460,8 @@ pycms_GetProfileInfoCopyright (PyObject *self, PyObject *args) {
 	}
 
 	buffer=malloc(BUFFER_SIZE);
-	hProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(profile);
+	//hProfile = (cmsHPROFILE) PyCObject_AsVoidPtr(profile);
+	hProfile = (cmsHPROFILE) PyCapsule_GetPointer(profile, NULL);
 
 	cmsGetProfileInfoASCII(hProfile,
 			cmsInfoCopyright,
@@ -455,8 +497,22 @@ PyMethodDef pycms_methods[] = {
 	{NULL, NULL}
 };
 
-void
-init_lcms2(void)
+//void
+//init_lcms2(void)
+//{
+//    Py_InitModule("_lcms2", pycms_methods);
+//}
+
+static struct PyModuleDef lcms2_def =
 {
-    Py_InitModule("_lcms2", pycms_methods);
+    PyModuleDef_HEAD_INIT,
+    "_lcms2",     /* name of module */
+    "",          /* module documentation, may be NULL */
+    -1,          /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+    pycms_methods
+};
+
+PyMODINIT_FUNC PyInit__lcms2(void)
+{
+    return PyModule_Create(&lcms2_def);
 }
