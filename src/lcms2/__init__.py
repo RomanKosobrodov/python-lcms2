@@ -223,8 +223,8 @@ def cmsDoTransform(hTransform, inbuff, outbuff, val=None):
 					transformation results. Can be [0,0,0,0,0].
 	val - stub parameter for python-lcms compatibility			              
 	"""
-	if type(inbuff) is types.ListType and type(outbuff) is types.ListType and \
-	len(inbuff) == 5 and len(outbuff) == 5 :
+	if isinstance(inbuff, list) and isinstance(outbuff, list) and \
+	len(inbuff) == 5 and len(outbuff) == 5:
 		vals = inbuff[:4] + [outbuff[4], ]
 		if inbuff[4] == COLOR_WORD:
 			ret = _lcms2.transformPixel16b(hTransform, *vals)
@@ -232,12 +232,8 @@ def cmsDoTransform(hTransform, inbuff, outbuff, val=None):
 			ret = _lcms2.transformPixelDbl(hTransform, *vals)
 		else:
 			ret = _lcms2.transformPixel(hTransform, *vals)
-		outbuff[0] = ret[0]
-		outbuff[1] = ret[1]
-		outbuff[2] = ret[2]
-		outbuff[3] = ret[3]
+		outbuff[:4] = ret[:4]
 		return
-
 	else:
 		raise CmsError("inputBuffer and outputBuffer must be Python lists of length 5")
 
