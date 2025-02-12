@@ -390,10 +390,14 @@ pycms_GetProfileName (PyObject *self, PyObject *args) {
 	buffer=malloc(BUFFER_SIZE);
 	hProfile = (cmsHPROFILE) PyCapsule_GetPointer(profile, NULL);
 
-	cmsGetProfileInfoASCII(hProfile,
+	cmsUInt32Number info_size;
+	info_size = cmsGetProfileInfoUTF8(hProfile,
 			cmsInfoDescription,
 			cmsNoLanguage, cmsNoCountry,
 			buffer, BUFFER_SIZE);
+
+    if (info_size == 0)
+        buffer[0] = 0x0;
 
 	ret=Py_BuildValue("s", buffer);
 	free(buffer);
@@ -416,12 +420,17 @@ pycms_GetProfileInfo (PyObject *self, PyObject *args) {
 	buffer=malloc(BUFFER_SIZE);
 	hProfile = (cmsHPROFILE) PyCapsule_GetPointer(profile, NULL);
 
-	cmsGetProfileInfoASCII(hProfile,
+	cmsUInt32Number info_size;
+	info_size = cmsGetProfileInfoUTF8(hProfile,
 			cmsInfoModel,
 			cmsNoLanguage, cmsNoCountry,
 			buffer, BUFFER_SIZE);
 
+    if (info_size == 0)
+        buffer[0] = 0x0;
+
 	ret=Py_BuildValue("s", buffer);
+
 	free(buffer);
 	return ret;
 }
@@ -442,12 +451,17 @@ pycms_GetProfileInfoCopyright (PyObject *self, PyObject *args) {
 	buffer=malloc(BUFFER_SIZE);
 	hProfile = (cmsHPROFILE) PyCapsule_GetPointer(profile, NULL);
 
-	cmsGetProfileInfoASCII(hProfile,
+	cmsUInt32Number info_size;
+	info_size = cmsGetProfileInfoUTF8(hProfile,
 			cmsInfoCopyright,
 			cmsNoLanguage, cmsNoCountry,
 			buffer, BUFFER_SIZE);
 
+    if (info_size == 0)
+        buffer[0] = 0x0;
+
 	ret=Py_BuildValue("s", buffer);
+
 	free(buffer);
 	return ret;
 }

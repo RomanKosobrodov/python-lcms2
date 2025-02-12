@@ -3,10 +3,10 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "lcms2py"
-version = "0.0.1"
+name = "pylcms2"
+version = "0.0.12"
 authors = [
-    { name = "Igor E. Novikov", email = "sk1.project.org@gmail.com"},
+    { name = "Igor E. Novikov", email = "sk1.project.org@gmail.com" },
     { name = "Roman Kosobrodov", email = "roman@kosobrodov.net" },
 ]
 description = "Python binding for LittleCMS2 library"
@@ -17,9 +17,9 @@ classifiers = [
     'Programming Language :: C',
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
-	'Development Status :: 5 - Stable',
-	'Environment :: Console',
-    'Topic :: Multimedia :: Graphics :: Graphics Conversion'    
+    "Development Status :: 4 - Beta",
+    'Environment :: Console',
+    'Topic :: Multimedia :: Graphics :: Graphics Conversion'
 ]
 keywords = [""]
 dependencies = []
