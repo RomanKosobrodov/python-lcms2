@@ -1,5 +1,56 @@
+import sys
+import os
 from setuptools import setup, Extension
-from sys import platform
+import platform
+
+
+def get_architecture():
+    num_bits, _ = platform.architecture()
+    machine = platform.machine()
+    if  num_bits.startswith("64"):
+        arch = "arm64" if machine.lower().startswith("arm") else "x64"
+        return arch
+    else:
+        arch = "arm" if machine.lower().startswith("arm") else "x86"
+        return arch
+
+
+def get_additional_paths():
+    include_path = list()
+    libraries_path = list()
+    if sys.platform.startswith("win"):
+        import winreg
+        r = winreg.ConnectRegistry(None, winreg.HKEY_LOCAL_MACHINE)
+        key_name = "SOFTWARE\\WOW6432Node\\Microsoft\\Microsoft SDKs\\Windows"
+        try:
+            key = winreg.OpenKey(r, key_name)
+            num_keys, num_values, timestamp = winreg.QueryInfoKey(key)
+            recent_timestamp = 0
+            root_path = ""
+            version = ""
+            for n in range(num_keys):
+                subkey_name = winreg.EnumKey(key, n)
+                subkey = winreg.OpenKey(r, key_name + "\\" + subkey_name)
+                nk, nv, timestamp = winreg.QueryInfoKey(subkey)
+                if timestamp > recent_timestamp:
+                    record = dict()
+                    for q in range(nv):
+                        name, value, _ = winreg.EnumValue(subkey, q)
+                        record[name] = value
+                    root_path = record["InstallationFolder"]
+                    version = record["ProductVersion"] + ".0"
+            for p in ("cppwinrt", "shared", "ucrt", "um", "winrt"):
+                folder = os.path.sep.join((root_path + "Include", version, p))
+                include_path.append(folder)
+            arch = get_architecture()
+            for p in ("ucrt", "um"):
+                folder = os.path.sep.join((root_path + "Lib", version, p, arch))
+                libraries_path.append(folder)
+        except:
+            raise RuntimeError("Unable to locate Windows SDK on this platform. Is it installed?")
+
+    return include_path, libraries_path
+
 
 SOURCES = ["src/lcms2/_lcms2.c",
            "Little-CMS/src/cmsalpha.c",
@@ -32,16 +83,7 @@ SOURCES = ["src/lcms2/_lcms2.c",
 INCLUDE_DIRECTORIES = ["Little-CMS/include", "Little-CMS/src"]
 LIBRARY_DIRECTORIES = list()
 
-if platform == "win32":
-     sdk = "C:\\Program Files (x86)\\Windows Kits\\10\\"
-     sdk_include = sdk + "Include\\10.0.26100.0\\"
-     sdk_lib = sdk + "Lib\\10.0.26100.0\\"
-     for p in ("cppwinrt", "shared", "ucrt", "um", "winrt"):
-         INCLUDE_DIRECTORIES.append(sdk_include + p)
-
-     for p in ("ucrt", "um"):
-         LIBRARY_DIRECTORIES.append(sdk_lib + p + "\\x64")
-
+extra_include, extra_libs = get_additional_paths()
 
 setup_args = dict(
     ext_modules=[
@@ -49,8 +91,8 @@ setup_args = dict(
             name="_lcms2",
             language="c",
             define_macros=[('MAJOR_VERSION', '0'), ('MINOR_VERSION', '4')],
-            include_dirs=INCLUDE_DIRECTORIES,
-            library_dirs=LIBRARY_DIRECTORIES,
+            include_dirs=INCLUDE_DIRECTORIES + extra_include,
+            library_dirs=LIBRARY_DIRECTORIES + extra_libs,
             sources=SOURCES,
             py_limited_api=True
         )
