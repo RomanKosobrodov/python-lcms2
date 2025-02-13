@@ -2,6 +2,7 @@ import sys
 import os
 from setuptools import setup, Extension
 import platform
+import numpy as np
 
 
 def get_architecture():
@@ -52,7 +53,7 @@ def get_additional_paths():
     return include_path, libraries_path
 
 
-SOURCES = ["src/lcms2/_lcms2.c",
+SOURCES = ["src/pylcms2/_lcms2.c",
            "Little-CMS/src/cmsalpha.c",
            "Little-CMS/src/cmscam02.c",
            "Little-CMS/src/cmscgats.c",
@@ -80,7 +81,7 @@ SOURCES = ["src/lcms2/_lcms2.c",
            "Little-CMS/src/cmswtpnt.c",
            "Little-CMS/src/cmsxform.c"]
 
-INCLUDE_DIRECTORIES = ["Little-CMS/include", "Little-CMS/src"]
+INCLUDE_DIRECTORIES = ["Little-CMS/include", "Little-CMS/src", np.get_include()]
 LIBRARY_DIRECTORIES = list()
 
 extra_include, extra_libs = get_additional_paths()

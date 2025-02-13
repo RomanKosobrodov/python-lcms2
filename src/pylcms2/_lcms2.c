@@ -16,8 +16,102 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define PY_SSIZE_T_CLEAN
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <Python.h>
+#include <numpy/arrayobject.h>
 #include <lcms2.h>
+#include <lcms2_internal.h>
+#include <string.h>
+
+#include "profile.h"
+
+#define BUFFER_SIZE 1000
+
+static void
+free_profile_handle(PyObject *capsule){
+    cmsHPROFILE profile = (cmsHPROFILE) PyCapsule_GetPointer(capsule, NULL);
+    if (profile != NULL) {
+        cmsCloseProfile(profile);
+    }
+}
+
+static  PyObject*
+create_python_string(const char* src, cmsUInt32Number count)
+{
+    if (count == 0)
+        return PyUnicode_FromString("");
+    else
+        return PyUnicode_FromStringAndSize(src, count - 1); // trim 0x0 at the end
+}
+
+static PyObject *
+create_profile(PyObject *self, PyObject *args)
+{
+    char *profile_name = NULL;
+	if (!PyArg_ParseTuple(args, "s", &profile_name)){
+		return Py_BuildValue("");
+	}
+
+    cmsHPROFILE profile_handle = NULL;
+    if (strcmp(profile_name, "sRGB") == 0) {
+        profile_handle = cmsCreate_sRGBProfile();
+	}
+    else if (strcmp(profile_name, "XYZ") == 0) {
+        profile_handle = cmsCreateXYZProfile();
+    }
+    else if (strcmp(profile_name, "Lab") == 0) {
+        profile_handle = cmsCreateLab4Profile(0);
+    }
+
+    if(profile_handle == NULL) {
+        return Py_BuildValue("");
+    }
+
+    profile_object* result = (profile_object*) PyObject_CallNoArgs((PyObject*)&profile_type);
+    if (result == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "Unable to create Profile object");
+        return NULL;
+    }
+
+	char* buffer = malloc(BUFFER_SIZE);
+	cmsUInt32Number info_size;
+
+	info_size = cmsGetProfileInfoUTF8(profile_handle,
+			cmsInfoDescription,
+			cmsNoLanguage, cmsNoCountry,
+			buffer, BUFFER_SIZE);
+    result->name = create_python_string(buffer, info_size);
+
+	info_size = cmsGetProfileInfoUTF8(profile_handle,
+			cmsInfoModel,
+			cmsNoLanguage, cmsNoCountry,
+			buffer, BUFFER_SIZE);
+    result->info = create_python_string(buffer, info_size);
+
+	info_size = cmsGetProfileInfoUTF8(profile_handle,
+			cmsInfoCopyright,
+			cmsNoLanguage, cmsNoCountry,
+			buffer, BUFFER_SIZE);
+    result->copyright = create_python_string(buffer, info_size);
+
+    free(buffer);
+
+    if (result->name == NULL || result->info == NULL || result->copyright == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "Unable retrieve profile information");
+        return NULL;
+    }
+
+    result->handle = PyCapsule_New(profile_handle,
+                                   NULL,
+                                   free_profile_handle);
+    if (result->handle == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "Unable create handle object for profile");
+        return NULL;
+    }
+
+	return (PyObject*) result;
+}
 
 cmsUInt32Number
 getLCMStype (char* mode) {
@@ -372,7 +466,7 @@ pycms_TransformPixelDbl (PyObject *self, PyObject *args) {
 	return result;
 }
 
-#define BUFFER_SIZE 1000
+
 
 static PyObject *
 pycms_GetProfileName (PyObject *self, PyObject *args) {
@@ -471,8 +565,25 @@ pycms_GetVersion (PyObject *self, PyObject *args) {
 	return Py_BuildValue("i",  LCMS_VERSION);
 }
 
+static PyObject* apply_transform(PyObject *self, PyObject *args) {
+	PyObject *transform_obj;
+	PyObject *src_obj;
+
+	if (!PyArg_ParseTuple(args, "OO", &transform_obj, &src_obj)) {
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+
+	_cmsTRANSFORM* transform;
+	transform = (_cmsTRANSFORM*) PyCapsule_GetPointer(transform_obj, NULL);
+    return Py_BuildValue("[i, i, i, i]", transform->InputFormat,
+    transform->OutputFormat, TYPE_XYZ_DBL, TYPE_RGBA_8);
+}
+
 static
 PyMethodDef pycms_methods[] = {
+    {"create_profile", create_profile, METH_VARARGS},
+    {"apply_transform", apply_transform, METH_VARARGS},
 	{"getVersion", pycms_GetVersion, METH_VARARGS},
 	{"openProfile", pycms_OpenProfile, METH_VARARGS},
 	{"createRGBProfile", pycms_CreateRGBProfile, METH_VARARGS},
@@ -502,5 +613,20 @@ static struct PyModuleDef lcms2_def =
 
 PyMODINIT_FUNC PyInit__lcms2(void)
 {
-    return PyModule_Create(&lcms2_def);
+    if (PyType_Ready(&profile_type) < 0)
+        return NULL;
+
+    PyObject *m;
+    m = PyModule_Create(&lcms2_def);
+    if (m == NULL)
+        return NULL;
+
+    if (PyModule_AddObjectRef(m, "Profile", (PyObject *) &profile_type) < 0) {
+        Py_DECREF(m);
+        return NULL;
+    }
+
+    import_array(); // initialize  NumPy
+
+    return m;
 }

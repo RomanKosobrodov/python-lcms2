@@ -19,7 +19,6 @@
 # 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import types
 import _lcms2
 
 TYPE_RGB_8 = "RGBA"
@@ -55,6 +54,14 @@ COLOR_DBL = 2
 class CmsError(Exception):
 	def __init__(self, message="LibCMS2 error"):
 		super().__init__(message)
+
+def create_profile(profile):
+	if profile not in ("sRGB", "Lab", "XYZ"):
+		raise CmsError(f"Invalid profile '{profile}'. It must be one of: 'sRGB', 'Lab' or 'XYZ'")
+	p = _lcms2.create_profile(profile)
+	if p is None:
+		raise CmsError(f"Unable to create build-in profile '{profile}'")
+	return p
 
 
 def COLORB(channel0=0, channel1=0, channel2=0, channel3=0):
@@ -211,6 +218,10 @@ def cmsCreateProofingTransform(inputProfile, inMode,
 		raise CmsError(f"Unable to create proofing transform {inMode} -> {outMode}")
 
 	return result
+
+def apply_transform(transform, src):
+	return _lcms2.apply_transform(transform, src)
+
 
 def cmsDoTransform(hTransform, inbuff, outbuff, val=None):
 	"""

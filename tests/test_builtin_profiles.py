@@ -1,21 +1,21 @@
-import lcms2
+import pylcms2
 
 def test_version():
-    assert len(lcms2.get_version()) >= 3
+    assert len(pylcms2.get_version()) >= 3
 
 def test_builtins():
     profiles = {
-        "sRGB": lcms2.cmsCreate_sRGBProfile,
-        "Lab": lcms2.cmsCreateLabProfile,
-        "gray": lcms2.cmsCreateGrayProfile,
-        "XYZ": lcms2.cmsCreateXYZProfile
+        "sRGB": pylcms2.cmsCreate_sRGBProfile,
+        "Lab": pylcms2.cmsCreateLabProfile,
+        "gray": pylcms2.cmsCreateGrayProfile,
+        "XYZ": pylcms2.cmsCreateXYZProfile
     }
 
     for profile_name, profile_function in profiles.items():
         p = profile_function()
-        name = lcms2.cmsGetProfileName(p)
-        profile_copyright = lcms2.cmsGetProfileCopyright(p)
-        profile_info = lcms2.cmsGetProfileInfo(p)
+        name = pylcms2.cmsGetProfileName(p)
+        profile_copyright = pylcms2.cmsGetProfileCopyright(p)
+        profile_info = pylcms2.cmsGetProfileInfo(p)
         assert profile_name in name
         assert "use freely" in  profile_copyright
         assert isinstance(profile_info, str)
