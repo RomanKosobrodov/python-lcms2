@@ -11,29 +11,29 @@ def get_filepath(filename):
 def test_invalid_profile():
     try:
         filename = get_filepath('empty.icm')
-        pylcms2.cmsOpenProfileFromFile(filename)
-    except pylcms2.CmsError:
-        return
+        pylcms2.open_profile(filename)
     except Exception as e:
-        raise e
+        return
+    assert False
 
 
 def test_missing_profile():
     try:
         filename = get_filepath('this_profile_does_not_exist.icm')
-        pylcms2.cmsOpenProfileFromFile(filename)
-    except pylcms2.CmsError:
-        return
+        pylcms2.open_profile(filename)
     except Exception as e:
-        raise e
+        return
+    assert False
 
 def test_valid_cmyk_profile():
     filename = get_filepath("CMYK.icm")
-    profile = pylcms2.cmsOpenProfileFromFile(filename)
-    name = pylcms2.cmsGetProfileName(profile)
-    assert "CMYK" in name
-    info = pylcms2.cmsGetProfileInfo(profile)
-    assert "Offset printing" in info
-    copyright = pylcms2.cmsGetProfileCopyright(profile)
-    assert "Public" in copyright
+    p = pylcms2.open_profile(filename)
+    assert "CMYK" in p.name
+    assert "Offset printing" in p.info
+    assert "Public" in p.copyright
 
+
+if __name__ == "__main__":
+    test_invalid_profile()
+    test_missing_profile()
+    test_valid_cmyk_profile()

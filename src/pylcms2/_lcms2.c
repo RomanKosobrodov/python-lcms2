@@ -45,27 +45,12 @@ create_python_string(const char* src, cmsUInt32Number count)
         return PyUnicode_FromStringAndSize(src, count - 1); // trim 0x0 at the end
 }
 
-static PyObject *
-create_profile(PyObject *self, PyObject *args)
-{
-    char *profile_name = NULL;
-	if (!PyArg_ParseTuple(args, "s", &profile_name)){
-		return Py_BuildValue("");
-	}
-
-    cmsHPROFILE profile_handle = NULL;
-    if (strcmp(profile_name, "sRGB") == 0) {
-        profile_handle = cmsCreate_sRGBProfile();
-	}
-    else if (strcmp(profile_name, "XYZ") == 0) {
-        profile_handle = cmsCreateXYZProfile();
-    }
-    else if (strcmp(profile_name, "Lab") == 0) {
-        profile_handle = cmsCreateLab4Profile(0);
-    }
+static profile_object*
+create_profile_from_handle(cmsHPROFILE profile_handle) {
 
     if(profile_handle == NULL) {
-        return Py_BuildValue("");
+	    PyErr_SetString(PyExc_RuntimeError, "Profile is invalid or the file is corrupt.");
+        return NULL;
     }
 
     profile_object* result = (profile_object*) PyObject_CallNoArgs((PyObject*)&profile_type);
@@ -110,8 +95,45 @@ create_profile(PyObject *self, PyObject *args)
         return NULL;
     }
 
-	return (PyObject*) result;
+    return result;
 }
+
+
+static PyObject *
+create_profile(PyObject *self, PyObject *args)
+{
+    char *profile_name = NULL;
+	if (!PyArg_ParseTuple(args, "s", &profile_name)){
+	    PyErr_SetString(PyExc_ValueError, "Invalid argument - expected a string");
+		return NULL;
+	}
+
+    cmsHPROFILE profile_handle = NULL;
+    if (strcmp(profile_name, "sRGB") == 0) {
+        profile_handle = cmsCreate_sRGBProfile();
+	}
+    else if (strcmp(profile_name, "XYZ") == 0) {
+        profile_handle = cmsCreateXYZProfile();
+    }
+    else if (strcmp(profile_name, "Lab") == 0) {
+        profile_handle = cmsCreateLab4Profile(0);
+    }
+
+	return (PyObject*) create_profile_from_handle(profile_handle);
+}
+
+static PyObject *
+open_profile(PyObject *self, PyObject *args)
+{
+    char *file_name = NULL;
+	if (!PyArg_ParseTuple(args, "s", &file_name)){
+	    PyErr_SetString(PyExc_ValueError, "Invalid argument - expected a string");
+		return NULL;
+	}
+    cmsHPROFILE profile_handle = cmsOpenProfileFromFile(file_name, "r");
+    return (PyObject*) create_profile_from_handle(profile_handle);
+}
+
 
 cmsUInt32Number
 getLCMStype (char* mode) {
@@ -583,6 +605,7 @@ static PyObject* apply_transform(PyObject *self, PyObject *args) {
 static
 PyMethodDef pycms_methods[] = {
     {"create_profile", create_profile, METH_VARARGS},
+    {"open_profile", open_profile, METH_VARARGS},
     {"apply_transform", apply_transform, METH_VARARGS},
 	{"getVersion", pycms_GetVersion, METH_VARARGS},
 	{"openProfile", pycms_OpenProfile, METH_VARARGS},

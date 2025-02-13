@@ -55,12 +55,21 @@ class CmsError(Exception):
 	def __init__(self, message="LibCMS2 error"):
 		super().__init__(message)
 
+
 def create_profile(profile):
 	if profile not in ("sRGB", "Lab", "XYZ"):
 		raise CmsError(f"Invalid profile '{profile}'. It must be one of: 'sRGB', 'Lab' or 'XYZ'")
 	p = _lcms2.create_profile(profile)
-	if p is None:
-		raise CmsError(f"Unable to create build-in profile '{profile}'")
+	return p
+
+
+def open_profile(filename):
+	if not isinstance(filename, str):
+		raise CmsError("filename must be a string containing a path to a profile")
+	if not os.path.isfile(filename):
+		raise CmsError(f"Unable to find '{filename}'.")
+
+	p = _lcms2.open_profile(filename)
 	return p
 
 
