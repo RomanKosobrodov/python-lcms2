@@ -15,7 +15,7 @@ def test_neutral_grey():
     assert np.allclose(r, reference)
 
 
-def test_RGB_to_CMYK():
+def test_rgb_to_cmyk():
     fn = os.path.join(os.path.dirname(__file__),
                       'cms_data',
                       "CMYK.icm")
@@ -45,6 +45,6 @@ def test_apply_sliced():
 
 
 if __name__ == "__main__":
-    test_RGB_to_CMYK()
+    test_rgb_to_cmyk()
     test_neutral_grey()
     test_apply_sliced()
