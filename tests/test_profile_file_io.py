@@ -11,7 +11,7 @@ def get_filepath(filename):
 def test_invalid_profile():
     try:
         filename = get_filepath('empty.icm')
-        pylcms2.open_profile(filename)
+        pylcms2.Profile(filename=filename)
     except Exception as e:
         return
     assert False
@@ -20,20 +20,34 @@ def test_invalid_profile():
 def test_missing_profile():
     try:
         filename = get_filepath('this_profile_does_not_exist.icm')
-        pylcms2.open_profile(filename)
+        pylcms2.Profile(filename=filename)
     except Exception as e:
         return
     assert False
 
+
 def test_valid_cmyk_profile():
     filename = get_filepath("CMYK.icm")
-    p = pylcms2.open_profile(filename)
+    p = pylcms2.Profile(filename=filename)
     assert "CMYK" in p.name
     assert "Offset printing" in p.info
     assert "Public" in p.copyright
+
+
+def test_file_round_trip():
+    reference = pylcms2.Profile("Lab")
+    fn = get_filepath("tmp_profile.icm")
+    reference.save(fn)
+    p = pylcms2.Profile(filename=fn)
+    assert reference.name == p.name
+    assert reference.info == p.info
+    assert reference.copyright == p.copyright
+    p.handle = None  # close CMS profile and release the file 
+    os.remove(fn)
 
 
 if __name__ == "__main__":
     test_invalid_profile()
     test_missing_profile()
     test_valid_cmyk_profile()
+    test_file_round_trip()

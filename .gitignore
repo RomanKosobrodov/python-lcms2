@@ -1,7 +1,11 @@
 .venv
 .idea
+.vscode
 build
 dist
 *.egg-info/
 *.pyd
 __pycache__/
+
+build.bat
+run.bat

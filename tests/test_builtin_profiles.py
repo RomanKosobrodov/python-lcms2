@@ -9,7 +9,7 @@ def is_valid_handle(h):
 
 def test_builtins():
     for profile_name in ("sRGB", "Lab", "XYZ"):
-        p = pylcms2.create_profile(profile_name)
+        p = pylcms2.Profile(profile_name)
         assert profile_name in p.name
         assert "use freely" in p.copyright
         assert is_valid_handle(p.handle)

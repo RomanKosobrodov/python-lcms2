@@ -1,303 +1,135 @@
-# -*- coding: utf-8 -*-
-#
-# 	lcms2 - package which provides simplified binding to LittleCMS2 library.
-# 	Specially created for SwatchBooker.
-#
-# 	Copyright (C) 2017 by Igor E. Novikov
-#
-# 	This program is free software: you can redistribute it and/or modify
-# 	it under the terms of the GNU General Public License as published by
-# 	the Free Software Foundation, either version 3 of the License, or
-# 	(at your option) any later version.
-#
-# 	This program is distributed in the hope that it will be useful,
-# 	but WITHOUT ANY WARRANTY; without even the implied warranty of
-# 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# 	GNU General Public License for more details.
-#
-# 	You should have received a copy of the GNU General Public License
-# 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import os
+import re
 import _lcms2
+import numpy as np
 
-TYPE_RGB_8 = "RGBA"
-TYPE_RGB_16 = "RGBA;16"
-TYPE_RGBA_8 = "RGBA"
-TYPE_RGBA_16 = "RGBA;16"
-TYPE_CMYK_8 = "CMYK"
-TYPE_CMYK_16 = "CMYK;16"
-TYPE_GRAY_8 = "L"
-TYPE_GRAY_16 = "L;16"
-TYPE_Lab_8 = "LAB"
-TYPE_Lab_DBL = "LAB;float"
-TYPE_XYZ_DBL = "XYZ;float"
+DATA_TYPES = _lcms2.DATA_TYPES
 
-INTENT_PERCEPTUAL = 0
-INTENT_RELATIVE_COLORIMETRIC = 1
-INTENT_SATURATION = 2
-INTENT_ABSOLUTE_COLORIMETRIC = 3
+INTENT = {
+	"PERCEPTUAL": 0,
+	"RELATIVE_COLORIMETRIC": 1,
+	"SATURATION": 2,
+	"ABSOLUTE_COLORIMETRIC": 3
+}
 
-cmsFLAGS_NOTPRECALC = 0x0100
-cmsFLAGS_GAMUTCHECK = 0x1000
-cmsFLAGS_SOFTPROOFING = 0x4000
-cmsFLAGS_BLACKPOINTCOMPENSATION = 0x2000
-cmsFLAGS_PRESERVEBLACK = 0x8000
-cmsFLAGS_NULLTRANSFORM = 0x0200
-cmsFLAGS_HIGHRESPRECALC = 0x0400
-cmsFLAGS_LOWRESPRECALC = 0x0800
+FLAG = {
+	"NONE": 0x0,
+	"NOTPRECALC": 0x0100,
+	"GAMUTCHECK": 0x1000,
+	"SOFTPROOFING": 0x4000,
+	"BLACKPOINTCOMPENSATION": 0x2000,
+	"PRESERVEBLACK": 0x8000,
+	"NULLTRANSFORM": 0x0200,
+	"HIGHRESPRECALC": 0x0400,
+	"LOWRESPRECALC": 0x0800
+}
 
-COLOR_BYTE = 0
-COLOR_WORD = 1
-COLOR_DBL = 2
-
-class CmsError(Exception):
+class CMSError(Exception):
 	def __init__(self, message="LibCMS2 error"):
 		super().__init__(message)
 
 
+def get_version():
+	ver = str(_lcms2.get_version())
+	return f"{ver[0]}.{ver[1:]}"
+
+
 def create_profile(profile):
 	if profile not in ("sRGB", "Lab", "XYZ"):
-		raise CmsError(f"Invalid profile '{profile}'. It must be one of: 'sRGB', 'Lab' or 'XYZ'")
+		raise CMSError(f"Invalid profile '{profile}'. It must be one of: 'sRGB', 'Lab' or 'XYZ'")
 	p = _lcms2.create_profile(profile)
 	return p
 
 
 def open_profile(filename):
 	if not isinstance(filename, str):
-		raise CmsError("filename must be a string containing a path to a profile")
+		raise CMSError("filename must be a string containing a path to a profile")
 	if not os.path.isfile(filename):
-		raise CmsError(f"Unable to find '{filename}'.")
+		raise CMSError(f"Unable to find '{filename}'.")
 
 	p = _lcms2.open_profile(filename)
 	return p
 
+def profile_from_memory(buffer):
+	if not isinstance(buffer, bytes):
+		raise CMSError("filename must be a bytes object")
 
-def COLORB(channel0=0, channel1=0, channel2=0, channel3=0):
-	"""
-	Emulates COLORB object from python-lcms.
-	Actually function returns regular 5-member list.
-	"""
-	return [channel0, channel1, channel2, channel3, COLOR_BYTE]
-
-def COLORW(channel0=0, channel1=0, channel2=0, channel3=0):
-	"""
-	Emulates COLORW object from python-lcms.
-	Actually function returns regular 5-member list.
-	"""
-	return [channel0, channel1, channel2, channel3, COLOR_WORD]
-
-def cmsCIEXYZ(channel0=0.0, channel1=0.0, channel2=0.0, channel3=0.0):
-	"""
-	Emulates cmsCIEXYZ object from python-lcms.
-	Actually function returns regular 5-member list.
-	"""
-	return [channel0, channel1, channel2, channel3, COLOR_DBL]
-
-def cmsCIELab(channel0=0.0, channel1=0.0, channel2=0.0, channel3=0.0):
-	"""
-	Emulates cmsCIELab object from python-lcms.
-	Actually function returns regular 5-member list.
-	"""
-	return [channel0, channel1, channel2, channel3, COLOR_DBL]
-
-def get_version():
-	"""
-	Returns LCMS version.
-	"""
-	ver = str(_lcms2.getVersion())
-	return ver[0] + '.' + ver[2]
+	p = _lcms2.profile_from_memory(buffer)
+	return p
 
 
-def cmsOpenProfileFromFile(profileFilename, mode=None):
-	"""	
-	Returns a handle to lcms2 profile wrapped as a Python object. 
-	The handle doesn't require to be closed after usage because
-	on object delete operation Python calls native cmsCloseProfile()
-	function automatically  
-
-	profileFilename - a valid filename path to the ICC profile
-	mode - stub parameter for python-lcms compatibility
-	"""
-	if not os.path.isfile(profileFilename):
-		raise CmsError(f"Invalid profile path provided: \"{profileFilename}\"")
-
-	result = _lcms2.openProfile(profileFilename)
-
-	if result is None:
-		raise CmsError(f"Invalid profile provided in \"{profileFilename}\"")
-
-	return result
-
-def cmsCreate_sRGBProfile():
-	"""
-	Returns a handle to lcms2 built-in sRGB profile.
-	"""
-	return _lcms2.createRGBProfile()
-
-def cmsCreateXYZProfile():
-	"""
-	Returns a handle to lcms2 built-in XYZ profile.
-	"""
-	return _lcms2.createXYZProfile()
-
-def cmsCreateLabProfile(val=None):
-	"""
-	Returns a handle to lcms2 built-in Lab profile.
-	
-	val - stub parameter for python-lcms compatibility
-	"""
-	return _lcms2.createLabProfile()
-
-def cmsCreateGrayProfile():
-	"""
-	Returns a handle to lcms2 built-in Gray profile.
-	"""
-	return _lcms2.createGrayProfile()
-
-def cmsCreateTransform(inputProfile, inMode,
-					outputProfile, outMode,
-					renderingIntent=INTENT_PERCEPTUAL,
-					flags=cmsFLAGS_NOTPRECALC):
-	"""
-	Returns a handle to lcms2 transformation wrapped as a Python object.
-	The handle doesn't require to be closed after usage because
-	on object delete operation Python calls native cmsDeleteTransform()
-	function automatically 
-
-	inputProfile - a valid lcms profile handle
-	inMode - predefined string constant 
-			(i.e. TYPE_RGB_8, TYPE_RGBA_8, TYPE_CMYK_8, etc.)	
-	outputProfile - a valid lcms profile handle	
-	outMode - predefined string constant 
-			(i.e. TYPE_RGB_8, TYPE_RGBA_8, TYPE_CMYK_8, etc.)		
-	renderingIntent - integer constant (0-3) specifying rendering intent 
-			for the transform
-	flags - a set of predefined lcms flags
-	"""
-
-	if renderingIntent not in (0, 1, 2, 3):
-		raise CmsError ("renderingIntent must be an integer between 0 and 3")
-
-	result = _lcms2.buildTransform(inputProfile, inMode,
-								outputProfile, outMode,
-								renderingIntent, flags)
-
-	if result is None:
-		msg = 'Cannot create requested transform'
-		raise CmsError(f"Unable to create transform {inMode} -> {outMode}")
-
-	return result
-
-def cmsCreateProofingTransform(inputProfile, inMode,
-						outputProfile, outMode,
-						proofingProfile,
-						renderingIntent=INTENT_PERCEPTUAL,
-						proofingIntent=INTENT_RELATIVE_COLORIMETRIC,
-						flags=cmsFLAGS_SOFTPROOFING):
-	"""
-	Returns a handle to lcms transformation wrapped as a Python object.
-
-	inputProfile - a valid lcms profile handle
-	outputProfile - a valid lcms profile handle
-	proofingProfile - a valid lcms profile handle 
-	inMode - predefined string constant 
-			(i.e. TYPE_RGB_8, TYPE_RGBA_8, TYPE_CMYK_8, etc.) or valid PIL mode		
-	outMode - predefined string constant 
-			(i.e. TYPE_RGB_8, TYPE_RGBA_8, TYPE_CMYK_8, etc.) or valid PIL mode		
-	renderingIntent - integer constant (0-3) specifying rendering intent 
-			for the transform
-	proofingIntent - integer constant (0-3) specifying proofing intent 
-			for the transform
-	flags - a set of predefined lcms flags
-	"""
-
-	if renderingIntent not in (0, 1, 2, 3):
-		raise CmsError('renderingIntent must be an integer between 0 and 3')
-
-	if proofingIntent not in (0, 1, 2, 3):
-		raise CmsError('proofingIntent must be an integer between 0 and 3')
-
-	result = _lcms2.buildProofingTransform(inputProfile, inMode,
-										outputProfile, outMode,
-										proofingProfile, renderingIntent,
-										proofingIntent, flags)
-
-	if result is None:
-		raise CmsError(f"Unable to create proofing transform {inMode} -> {outMode}")
-
-	return result
-
-def apply_transform(transform, src):
-	return _lcms2.apply_transform(transform, src)
+def profile_to_bytes(profile):
+	if not isinstance(profile, (_lcms2.Profile, Profile)):
+		raise CMSError("wrong type of argument: expected Profile")
+	return _lcms2.profile_to_bytes(profile)
 
 
-def cmsDoTransform(hTransform, inbuff, outbuff, val=None):
-	"""
-	Transform color values from inputBuffer to outputBuffer using provided 
-	lcms transform handle.
-	
-	hTransform - a valid lcms transformation handle
-	inbuff - 5-member list object.
-	outbuff - 5-member list object with any values for recording 
-					transformation results. Can be [0,0,0,0,0].
-	val - stub parameter for python-lcms compatibility			              
-	"""
-	if isinstance(inbuff, list) and isinstance(outbuff, list) and \
-	len(inbuff) == 5 and len(outbuff) == 5:
-		vals = inbuff[:4] + [outbuff[4], ]
-		if inbuff[4] == COLOR_WORD:
-			ret = _lcms2.transformPixel16b(hTransform, *vals)
-		elif inbuff[4] == COLOR_DBL:
-			ret = _lcms2.transformPixelDbl(hTransform, *vals)
-		else:
-			ret = _lcms2.transformPixel(hTransform, *vals)
-		outbuff[:4] = ret[:4]
-		return
-	else:
-		raise CmsError("inputBuffer and outputBuffer must be Python lists of length 5")
+class Profile:
+	def __init__(self, builtin=None, filename=None, buffer=None):
+		if builtin is not None and filename is None and buffer is None:
+			self._assign(profile=create_profile(builtin))
+			return
+		if filename is not None and builtin is None and buffer is None:
+			self._assign(profile=open_profile(filename))
+			return
+		if buffer is not None and builtin is None and filename is None:
+			self._assign(profile=profile_from_memory(buffer))
+			return
+		raise CMSError("Only one source of profile data can be specified: a built-in profile name, filename or bytes object")
+
+	def _assign(self, profile):
+		self.handle = profile.handle
+		self.name = profile.name
+		self.info = profile.info
+		self.copyright = profile.copyright
+
+	def to_bytes(self):
+		return _lcms2.profile_to_bytes(self)
+
+	def save(self, filename):
+		with open(filename, "wb") as f:
+			f.write(self.to_bytes())	
 
 
-def cmsDeleteTransform(transform):
-	"""
-	This is a function stub for python-lcms compatibility.
-	Transform handle will be released automatically.
-	"""
-	pass
+class Transform:
+	def __init__(self, src_profile, src_format, dst_profile, dst_format, intent="PERCEPTUAL", flags="NONE"):
+		if not isinstance(src_profile, (Profile, _lcms2.Profile)):
+			raise CMSError(f"Wrong type of src_profile. Expected Profile but got '{type(src_profile)}'")
+		if src_format not in DATA_TYPES.keys():
+			raise CMSError(f"Invalid source data format: '{src_format}'")
+		if not isinstance(dst_profile, (Profile, _lcms2.Profile)):
+			raise CMSError(f"Wrong type of dst_profile. Expected Profile but got '{type(src_profile)}'")
+		if dst_format not in DATA_TYPES.keys():
+			raise CMSError(f"Invalid destination data format: '{dst_format}'")
+		if intent not in INTENT.keys():
+			raise CMSError(f"Invalid rendering intent: '{intent}'")
+		flag_list = re.split("[ ,;|]", flags)
+		transform_flags = FLAG["NONE"]
+		for f in flag_list:
+			if f not in FLAG.keys():
+				raise CMSError(f"Invalid flag: '{f}'")
+			transform_flags = transform_flags | FLAG[f]
+		
+		self.src_format = src_format
+		self.dst_format = dst_format
+		self.transform = _lcms2.Transform(src_profile, DATA_TYPES[src_format][0], 
+							dst_profile, DATA_TYPES[dst_format][0], 
+							INTENT[intent], transform_flags)
 
+	def apply(self, src):
+		_, src_numpy_type, src_channels = DATA_TYPES[self.src_format]	
+		_, dst_numpy_type, dst_channels = DATA_TYPES[self.dst_format]
+		x = src
+		if not isinstance(src, np.ndarray):
+			x = np.array(src, dtype=src_numpy_type)
+		if x.dtype != src_numpy_type:
+			raise CMSError(f"Source data type ({x.dtype}) does not match transform input type ({src_numpy_type}")
+		if x.shape[-1] != src_channels:
+			raise CMSError(f"Wrong number of input channels ({x.shape[-1]}); expected {src_channels}")
+		dst_shape = np.empty_like(x.shape)
+		dst_shape[:-1] = x.shape[:-1]
+		dst_shape[-1] = dst_channels
+		dst = np.empty(shape=dst_shape, dtype=dst_numpy_type)
+		self.transform.apply(x, dst, x.size//src_channels)
+		return dst
 
-def cmsCloseProfile(profile):
-	"""
-	This is a function stub for python-lcms compatibility.
-	Profile handle will be released automatically.
-	"""
-	pass
-
-def cmsGetProfileName(profile):
-	"""
-	This function is given mainly for building user interfaces.
-	
-	profile - a valid lcms profile handle
-	Returns profile name
-	"""
-	return _lcms2.getProfileName(profile)
-
-
-def cmsGetProfileInfo(profile):
-	"""
-	This function is given mainly for building user interfaces.
-	
-	profile - a valid lcms profile handle
-	Returns profile description info
-	"""
-	return _lcms2.getProfileInfo(profile)
-
-
-def cmsGetProfileCopyright(profile):
-	"""
-	This function is given mainly for building user interfaces.
-	
-	profile - a valid lcms profile handle
-	Returns profile copyright info
-	"""
-	return _lcms2.getProfileInfoCopyright(profile)
