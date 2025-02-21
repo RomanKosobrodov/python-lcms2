@@ -374,7 +374,7 @@ open_profile(PyObject *self, PyObject *args)
 static PyObject *
 profile_from_memory(PyObject *self, PyObject *args)
 {
-    PyBytesObject *buffer = NULL;
+    PyObject *buffer = NULL;
 	if (!PyArg_ParseTuple(args, "S",  &buffer)){
 	    PyErr_SetString(PyExc_ValueError, "Invalid argument - expected a bytes object");
 		return NULL;

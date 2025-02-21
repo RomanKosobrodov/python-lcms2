@@ -146,7 +146,7 @@ apply(transform_object *self, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
-    if (PyArray_SIZE(self) == 0) 
+    if (PyArray_SIZE((const PyArrayObject*)src) == 0) 
     {
         return Py_BuildValue("");
     }
@@ -158,21 +158,21 @@ apply(transform_object *self, PyObject *args, PyObject *kwds)
         return NULL;        
     }
 
-    PyArray_ENABLEFLAGS(dst, NPY_ARRAY_CARRAY);
+    PyArray_ENABLEFLAGS((PyArrayObject*)dst, NPY_ARRAY_CARRAY);
 
-    int array_flags = PyArray_FLAGS(src);
-    if (array_flags & NPY_ARRAY_ALIGNED != 0 &&
-        array_flags & NPY_ARRAY_C_CONTIGUOUS != 0)
+    int array_flags = PyArray_FLAGS((const PyArrayObject*)src);
+    if ((array_flags & NPY_ARRAY_ALIGNED) != 0 &&
+        (array_flags & NPY_ARRAY_C_CONTIGUOUS) != 0)
     {        
         cmsDoTransform( transform, 
-                        PyArray_DATA(src),
-                        PyArray_DATA(dst),
+                        PyArray_DATA((const PyArrayObject*)src),
+                        PyArray_DATA((const PyArrayObject*)dst),
                         num_pixels);
         return Py_BuildValue("");
     }
     else
     {
-        NpyIter* iter = NpyIter_New(src, NPY_ITER_READONLY|
+        NpyIter* iter = NpyIter_New((PyArrayObject *)src, NPY_ITER_READONLY|
                                 NPY_ITER_EXTERNAL_LOOP|
                                 NPY_ITER_REFS_OK,
                             NPY_KEEPORDER, NPY_NO_CASTING,
@@ -195,9 +195,9 @@ apply(transform_object *self, PyObject *args, PyObject *kwds)
         npy_intp* inner_size_ptr = NpyIter_GetInnerLoopSizePtr(iter);
 
         npy_intp num_src_channels = PyArray_Size(src) / num_pixels;
-        char* dst_ptr = (char *)PyArray_DATA(dst);
+        char* dst_ptr = (char *)PyArray_DATA((const PyArrayObject *)dst);
         npy_intp num_dst_channels = PyArray_Size(dst) / num_pixels;
-        npy_intp step_bytes = num_dst_channels * PyArray_ITEMSIZE(dst);
+        npy_intp step_bytes = num_dst_channels * PyArray_ITEMSIZE((const PyArrayObject *)dst);
         
         do 
         {
@@ -207,7 +207,7 @@ apply(transform_object *self, PyObject *args, PyObject *kwds)
 
             if (count % num_src_channels == 0 && stride == 1)
             {
-                npy_intp num_samples = count / num_src_channels;
+                uint32_t num_samples = (uint32_t)(count / num_src_channels);
                 cmsDoTransform(transform, 
                                 data,
                                 dst_ptr,
