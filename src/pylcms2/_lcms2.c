@@ -10,6 +10,7 @@
 #include "profile.h"
 #include "transform.h"
 #include "definitions.h"
+#include "white_point.h"
 
 static PyObject *
 get_version (PyObject *self, PyObject *args) {
@@ -19,9 +20,11 @@ get_version (PyObject *self, PyObject *args) {
 static
 PyMethodDef pycms_methods[] = {
     {"create_profile", create_profile, METH_VARARGS},
+    {"create_rgb_profile", create_rgb_profile, METH_VARARGS},
     {"open_profile", open_profile, METH_VARARGS},
     {"profile_from_memory", profile_from_memory, METH_VARARGS},
     {"profile_to_bytes", profile_to_bytes, METH_VARARGS},
+    {"white_point_from_temperature", white_point_from_temperature, METH_VARARGS},
 	{"get_version", get_version, METH_NOARGS},
 	{NULL, NULL}
 };

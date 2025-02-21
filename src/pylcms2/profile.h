@@ -187,28 +187,176 @@ create_profile_from_handle(cmsHPROFILE profile_handle) {
     return result;
 }
 
+static cmsCIExyY* array_to_xyY(PyObject *a, cmsCIExyY *color)
+{
+    if (a != NULL)
+    {
+        double *data;
+        npy_intp size = PyArray_Size(a);
+        if (size == 3)
+        {
+            const int num_dims = 1;
+            npy_intp dims[] = {size};
+            PyArray_AsCArray(&a, &data, dims, num_dims, PyArray_DescrFromType(NPY_DOUBLE));
+            if (data !=NULL )
+            {
+                color->x = data[0];
+                color->y = data[1];
+                color->Y = data[2];
+                return color;
+            }
+        }
+    }
+    return NULL;
+}
+
 
 static PyObject *
 create_profile(PyObject *self, PyObject *args)
 {
     char *profile_name = NULL;
-	if (!PyArg_ParseTuple(args, "s", &profile_name)){
-	    PyErr_SetString(PyExc_ValueError, "Invalid argument - expected a string");
+    PyObject *white_point = NULL;
+	if (!PyArg_ParseTuple(args, "sO", &profile_name, &white_point))
+	{
+	    PyErr_SetString(PyExc_ValueError, "Invalid argument - expected a string and an Object");
 		return NULL;
 	}
 
     cmsHPROFILE profile_handle = NULL;
-    if (strcmp(profile_name, "sRGB") == 0) {
+    if (strcmp(profile_name, "sRGB") == 0)
+    {
         profile_handle = cmsCreate_sRGBProfile();
 	}
-    else if (strcmp(profile_name, "XYZ") == 0) {
+    else if (strcmp(profile_name, "XYZ") == 0)
+    {
         profile_handle = cmsCreateXYZProfile();
     }
-    else if (strcmp(profile_name, "Lab") == 0) {
-        profile_handle = cmsCreateLab4Profile(0);
+    else if (strcmp(profile_name, "Lab") == 0)
+    {
+        cmsCIExyY wp;
+        cmsCIExyY *wp_ptr = array_to_xyY(white_point, &wp);
+        profile_handle = cmsCreateLab4Profile(wp_ptr);
     }
 
 	return (PyObject*) create_profile_from_handle(profile_handle);
+}
+
+
+static PyObject *
+create_rgb_profile(PyObject *self, PyObject *args)
+{
+    PyObject *white_point = NULL;
+    PyObject *red = NULL;
+    PyObject *green = NULL;
+    PyObject *blue = NULL;
+    int32_t curve_type = 0;
+    PyObject *parameters = NULL;
+
+	if (!PyArg_ParseTuple(args, "OOOOiO", &white_point,
+	                      &red, &green, &blue,
+	                      &curve_type, &parameters))
+	{
+	    PyErr_SetString(PyExc_ValueError, "Error parsing input arguments.");
+		return NULL;
+	}
+
+	cmsCIExyY wp;
+    cmsCIExyY* c_ptr = array_to_xyY(white_point, &wp);
+    if (c_ptr == NULL)
+    {
+	    PyErr_SetString(PyExc_ValueError, "Invalid argument: white_point. Expected a NumPy array with three elements containing xyY coordinates of the white point.");
+		return NULL;        
+    }
+
+    cmsCIExyYTRIPLE primaries;
+    c_ptr = array_to_xyY(red, &primaries.Red);
+    if (c_ptr == NULL)
+    {
+	    PyErr_SetString(PyExc_ValueError, "Invalid argument: red. Expected a NumPy array with three elements containing xyY coordinates of the red primary");
+		return NULL;        
+    }    
+
+    c_ptr = array_to_xyY(green, &primaries.Green);
+    if (c_ptr == NULL)
+    {
+	    PyErr_SetString(PyExc_ValueError, "Invalid argument: red. Expected a NumPy array with three elements containing xyY coordinates of the green primary.");
+		return NULL;        
+    }
+    
+    c_ptr = array_to_xyY(blue, &primaries.Blue);
+    if (c_ptr == NULL)
+    {
+	    PyErr_SetString(PyExc_ValueError, "Invalid argument: red. Expected a NumPy array with three elements containing xyY coordinates of the blue primary.");
+		return NULL;        
+    }
+    
+    if (parameters == NULL)
+    {
+	    PyErr_SetString(PyExc_ValueError, "Invalid argument: parameters. Expected a NumPy array with one to seven elements containing curve parameters.");
+		return NULL;            
+    }
+
+    npy_intp size = PyArray_Size(parameters);
+    if (size < 0 || size > 7)
+    {
+	    PyErr_SetString(PyExc_ValueError, "Invalid argument: parameters. Expected a NumPy array with one to seven elements containing curve parameters.");
+		return NULL;         
+    }
+    
+    double params[10];
+    double *data;
+    const int num_dims = 1;
+    npy_intp dims[] = {size};
+    PyArray_AsCArray(&parameters, &data, dims, num_dims, PyArray_DescrFromType(NPY_DOUBLE));
+    if (data ==NULL )
+    {
+        PyErr_SetString(PyExc_ValueError, "Invalid argument: parameters. Expected a NumPy array with one to seven elements containing curve parameters.");
+		return NULL;  
+    }
+
+    for (npy_intp k=0; k<size; ++k)
+    {
+        params[k] = data[k];
+    }    
+
+    cmsToneCurve* curve = cmsBuildParametricToneCurve(NULL, curve_type, params);
+    if (curve == NULL)
+    {
+        PyErr_SetString(PyExc_ValueError, "Error creating parametric curve from the provided curve type and parameters.");
+		return NULL;          
+    }
+
+    cmsToneCurve* transfer_function[3] = {curve, curve, curve};
+
+    PyObject* x = PyList_New(0);
+    cmsCIExyY *col = &wp;
+    PyList_Append(x, Py_BuildValue("ddd", col->x, col->y, col->Y));
+    col = &primaries.Red;
+    PyList_Append(x, Py_BuildValue("ddd", col->x, col->y, col->Y));
+    col = &primaries.Green;
+    PyList_Append(x, Py_BuildValue("ddd", col->x, col->y, col->Y));
+    col = &primaries.Blue;
+    PyList_Append(x, Py_BuildValue("ddd", col->x, col->y, col->Y));
+    PyList_Append(x, Py_BuildValue("i", curve_type));
+
+    PyObject* p_list = PyList_New(0);
+    for (npy_intp k=0; k<size; ++k)
+    {
+        PyList_Append(p_list, Py_BuildValue("d", params[k]));
+    }
+    PyList_Append(x, p_list); 
+
+    cmsHPROFILE profile_handle = cmsCreateRGBProfile(&wp, &primaries, transfer_function);
+    if (profile_handle == NULL)
+    {
+        PyErr_SetString(PyExc_ValueError, "Unable to create RGB profile from the provided parameters.");
+		return NULL;          
+    }
+
+   cmsFreeToneCurve(curve);
+
+    PyObject* result = (PyObject*) create_profile_from_handle(profile_handle);
+    return result;
 }
 
 static PyObject *

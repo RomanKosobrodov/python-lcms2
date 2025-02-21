@@ -22,12 +22,16 @@ Little CMS functionality is implemented by two classes: `Profile` and `Transform
 
 ## Profiles
 
-A `Profile` object can be created using one of the built-in profiles ('sRGB', 'Lab' and 'XYZ'), by reading a profile file (using the `filename` argument) or from data stored in memory as Python `bytes` object (`buffer` argument):
+A `Profile` object can be created using one of the built-in profiles, by reading a profile file (using the `filename` argument) or from data stored in memory as Python `bytes` object (`buffer` argument).
+
+Built-in profiles include `sRGB`, `Lab` and `XYZ` provided by the Little CMS library and additional RGB profiles: 
+`Adobe RGB (1998)`, `Apple RGB`, `Best RGB`, `Beta RGB`, `Bruce RGB`, `CIE RGB`, `ColorMatch RGB`, `Don RGB 4`, `ECI RGB v2`, `Ekta Space PS5`, `NTSC RGB`, `PAL/SECAM RGB`, `ProPhoto RGB`, `SMPTE-C RGB`, `_sRGB`, and `Wide Gamut RGB`.
 
 ```
 import pylcms2
 
 x = pylcms2.Profile("sRGB")
+p = pylcms2.Profile("ProPhoto RGB")
 y = pylcms2.Profile(filename="CMYK.icm")
 
 with open("CMYK.icm", "rb") as f:
