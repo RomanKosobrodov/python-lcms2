@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pylcms2"
-version = "0.0.19"
+version = "0.0.20"
 authors = [
     { name = "Roman Kosobrodov", email = "roman@kosobrodov.net" },
 ]
