@@ -9,6 +9,7 @@ typedef struct
     PyObject_HEAD int input_format;
     int output_format;
     int rendering_intent;
+    int proofing_intent;
     int flags;
     PyObject *handle;
 } transform_object;
@@ -44,6 +45,7 @@ transform_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     self->input_format = -1;
     self->output_format = -1;
     self->rendering_intent = -1;
+    self->proofing_intent = -1;
     self->flags = -1;
 
     self->handle = Py_BuildValue("");
@@ -56,47 +58,77 @@ transform_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     return (PyObject *)self;
 }
 
+static cmsHPROFILE
+get_profile(PyObject* p)
+{
+    if (p == NULL)
+        return NULL;
+
+    if (PyObject_HasAttrString(p, "handle") == 0)
+    {
+        return NULL;
+    }
+
+    PyObject *handle = PyObject_GetAttrString(p, "handle");
+    if (handle == NULL)
+    {
+        return NULL;
+    }
+
+    return (cmsHPROFILE)PyCapsule_GetPointer(handle, NULL);
+}
+
+
 static int
 transform_init(transform_object *self, PyObject *args, PyObject *kwds)
 {
     static char *kwlist[] = {"src_profile", "src_type", "dst_profile", "dst_type",
-                             "rendering_intent", "flags", NULL};
+                             "rendering_intent", "flags", "proofing_profile", "proofing_intent", NULL};
     PyObject *src_profile = NULL;
     PyObject *dst_profile = NULL;
+    PyObject *proofing_profile = NULL;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OiOiii", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OiOiiiOi", kwlist,
                                      &src_profile, &self->input_format,
                                      &dst_profile, &self->output_format,
                                      &self->rendering_intent,
-                                     &self->flags))
+                                     &self->flags,
+                                     &proofing_profile,
+                                     &self->proofing_intent))
     {                                 
         return -1;
     }
 
-    if (PyObject_HasAttrString(src_profile, "handle") == 0 ||
-        PyObject_HasAttrString(dst_profile, "handle") == 0)
-    {
-        return -1;
-    }
-
-    PyObject *src_handle = PyObject_GetAttrString(src_profile, "handle");
-    PyObject *dst_handle = PyObject_GetAttrString(dst_profile, "handle");
-    if (src_handle == NULL || dst_handle == NULL)
-    {
-        return -1;
-    }
-
-    cmsHPROFILE cms_src_profile = (cmsHPROFILE)PyCapsule_GetPointer(src_handle, NULL);
-    cmsHPROFILE cms_dst_profile = (cmsHPROFILE)PyCapsule_GetPointer(dst_handle, NULL);
+    cmsHPROFILE cms_src_profile = get_profile(src_profile);
+    cmsHPROFILE cms_dst_profile = get_profile(dst_profile);
     if (cms_src_profile == NULL || cms_dst_profile == NULL)
     {
         return -1;
     }
 
-    cmsHTRANSFORM transform_handle = cmsCreateTransform(cms_src_profile, self->input_format,
-                                                        cms_dst_profile, self->output_format,
-                                                        self->rendering_intent,
-                                                        self->flags);
+    cmsHTRANSFORM transform_handle = NULL;
+    if (proofing_profile == NULL || Py_IsNone(proofing_profile))
+    {
+        transform_handle = cmsCreateTransform(cms_src_profile, self->input_format,
+                                                            cms_dst_profile, self->output_format,
+                                                            self->rendering_intent,
+                                                            self->flags);
+    }
+    else
+    {
+        cmsHPROFILE cms_proofing_profile = get_profile(proofing_profile);
+        if (cms_proofing_profile == NULL)
+        {
+            return -1;
+        }
+
+        transform_handle = cmsCreateProofingTransform(cms_src_profile, self->input_format,
+            cms_dst_profile, self->output_format,
+            cms_proofing_profile, 
+            self->rendering_intent,
+            self->proofing_intent,
+            self->flags);
+    }
 
     if (transform_handle == NULL)
     {
@@ -114,11 +146,11 @@ static PyMemberDef transform_members[] = {
     {"input_format", Py_T_INT, offsetof(transform_object, input_format), 0, "input data format"},
     {"output_format", Py_T_INT, offsetof(transform_object, output_format), 0, "output data format"},
     {"rendering_intent", Py_T_INT, offsetof(transform_object, rendering_intent), 0, "rendering intent"},
+    {"proofing_intent", Py_T_INT, offsetof(transform_object,proofing_intent), 0, "proofing intent"},
     {"flags", Py_T_INT, offsetof(transform_object, flags), 0, "transform flags"},
     {"handle", Py_T_OBJECT_EX, offsetof(transform_object, handle), 0, "Little CMS2 transform handle"},
     {NULL} /* Sentinel */
 };
-
 
 
 static PyObject *

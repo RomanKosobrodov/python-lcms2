@@ -241,6 +241,14 @@ create_profile(PyObject *self, PyObject *args)
 	return (PyObject*) create_profile_from_handle(profile_handle);
 }
 
+static PyObject *
+create_default_profile(PyObject *self, PyObject *args)
+{
+    cmsHPROFILE profile_handle = NULL;
+    profile_handle = cmsCreateNULLProfile();
+    return (PyObject*) create_profile_from_handle(profile_handle);
+}
+
 
 static PyObject *
 create_rgb_profile(PyObject *self, PyObject *args)

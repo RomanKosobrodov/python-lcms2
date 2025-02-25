@@ -44,7 +44,28 @@ def test_apply_sliced():
     assert np.allclose(reference[::2, :], sliced)
 
 
+def test_proofing_transform():
+    src = pylcms2.Profile("Lab")
+    dst = pylcms2.Profile("sRGB")
+    proof = pylcms2.Profile("sRGB")
+    t1 = pylcms2.Transform(src, "Lab_DBL",
+                          dst, "RGB_16",
+                          proofing_profile=proof,
+                          proofing_intent="PRESERVE_K_ONLY_PERCEPTUAL",
+                          intent="PERCEPTUAL",
+                          flags="NONE")
+    t2 = pylcms2.Transform(src, "Lab_DBL",
+                          dst, "RGB_16",
+                          intent="PERCEPTUAL",
+                          flags="NONE")
+    x = [50, 11, -5]
+    r1 = t1.apply(x)
+    r2 = t2.apply(x)
+    assert np.allclose(r1, r2, atol=0)
+
+
 if __name__ == "__main__":
     test_rgb_to_cmyk()
     test_neutral_grey()
     test_apply_sliced()
+    test_proofing_transform()

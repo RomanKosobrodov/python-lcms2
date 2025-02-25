@@ -7,6 +7,14 @@ def is_valid_handle(h):
     t = type(h)
     return t.__module__ == 'builtins' and t.__name__ == 'PyCapsule'
 
+
+def test_default_profile():
+    p = pylcms2.Profile()
+    assert "NULL" in p.name
+    assert "use freely" in p.copyright
+    assert is_valid_handle(p.handle)
+
+
 def test_builtins():
     for profile_name in ("sRGB", "Lab", "XYZ"):
         p = pylcms2.Profile(profile_name)
@@ -16,4 +24,5 @@ def test_builtins():
 
 
 if __name__ == "__main__":
+    test_default_profile()
     test_builtins()

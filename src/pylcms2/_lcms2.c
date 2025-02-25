@@ -20,6 +20,7 @@ get_version (PyObject *self, PyObject *args) {
 static
 PyMethodDef pycms_methods[] = {
     {"create_profile", create_profile, METH_VARARGS},
+    {"create_default_profile", create_default_profile, METH_NOARGS},
     {"create_rgb_profile", create_rgb_profile, METH_VARARGS},
     {"open_profile", open_profile, METH_VARARGS},
     {"profile_from_memory", profile_from_memory, METH_VARARGS},

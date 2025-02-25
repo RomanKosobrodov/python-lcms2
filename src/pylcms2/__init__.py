@@ -13,6 +13,15 @@ INTENT = {
     "ABSOLUTE_COLORIMETRIC": 3
 }
 
+NON_ICC_INTENT = {
+    "PRESERVE_K_ONLY_PERCEPTUAL": 10,
+    "PRESERVE_K_ONLY_RELATIVE_COLORIMETRIC":  11,
+    "PRESERVE_K_ONLY_SATURATION": 12,
+    "PRESERVE_K_PLANE_PERCEPTUAL": 13,
+    "PRESERVE_K_PLANE_RELATIVE_COLORIMETRIC": 14,
+    "PRESERVE_K_PLANE_SATURATION": 15
+}
+
 FLAG = {
     "NONE": 0x0,
     "NOTPRECALC": 0x0100,
@@ -34,6 +43,9 @@ def get_version():
 class Profile:
     def __init__(self, builtin=None, filename=None, buffer=None,
                  white_point=None, degrees=2, temperature=None):
+        if builtin is None and filename is None and buffer is None:
+            self._assign(profile=_lcms2.create_default_profile())
+            return
         if builtin is not None and filename is None and buffer is None:
             self._assign(profile=create_profile(builtin, white_point=white_point, degrees=degrees, temperature=temperature))
             return
@@ -61,7 +73,8 @@ class Profile:
 
 
 class Transform:
-    def __init__(self, src_profile, src_format, dst_profile, dst_format, intent="PERCEPTUAL", flags="NONE"):
+    def __init__(self, src_profile, src_format, dst_profile, dst_format, intent="PERCEPTUAL", flags="NONE",
+                 proofing_profile=None, proofing_intent=None):
         if not isinstance(src_profile, (Profile, _lcms2.Profile)):
             raise CMSError(f"Wrong type of src_profile. Expected Profile but got '{type(src_profile)}'")
         if src_format not in DATA_TYPES.keys():
@@ -79,11 +92,19 @@ class Transform:
                 raise CMSError(f"Invalid flag: '{f}'")
             transform_flags = transform_flags | FLAG[f]
 
+        if proofing_profile is not None:
+            if not isinstance(proofing_profile, (Profile, _lcms2.Profile)):
+                raise CMSError(f"Wrong type of proofing_profile. Expected Profile but got '{type(src_profile)}'")
+            if proofing_intent not in NON_ICC_INTENT.keys():
+                raise CMSError(f"Invalid proofing intent: '{proofing_intent}'")
+
         self.src_format = src_format
         self.dst_format = dst_format
         self.transform = _lcms2.Transform(src_profile, DATA_TYPES[src_format][0],
-                                          dst_profile, DATA_TYPES[dst_format][0],
-                                          INTENT[intent], transform_flags)
+                                        dst_profile, DATA_TYPES[dst_format][0],
+                                        INTENT[intent], transform_flags,
+                                        proofing_profile,
+                                        NON_ICC_INTENT.get(proofing_intent, 0))
 
     def apply(self, src):
         _, src_numpy_type, src_channels = DATA_TYPES[self.src_format]
