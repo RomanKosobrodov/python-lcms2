@@ -3,6 +3,7 @@ import pylcms2
 def test_version():
     assert len(pylcms2.get_version()) >= 3
 
+
 def is_valid_handle(h):
     t = type(h)
     return t.__module__ == 'builtins' and t.__name__ == 'PyCapsule'
